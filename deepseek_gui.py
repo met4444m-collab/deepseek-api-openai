@@ -10,6 +10,7 @@ deepseek_gui.py — GUI (tkinter) для общения с DeepSeek через �
 import threading
 import time
 import queue
+import os
 
 import tkinter as tk
 from tkinter import scrolledtext, messagebox
@@ -35,11 +36,19 @@ CHAT_URL = "https://chat.deepseek.com/a/chat/s/42a1e1eb-8621-443b-817d-fa2e541fa
 # Путь к exe Яндекс Браузера
 YANDEX_EXE = r"C:\Program Files\Yandex\YandexBrowser\Application\browser.exe"
 
-# Профиль Яндекс Браузера (в нём хранится логин-сессия DeepSeek)
-YANDEX_PROFILE = r"C:\Users\developer\AppData\Local\Yandex\YandexBrowser\User Data"
+# Профиль Яндекс Браузера. Используем ОТДЕЛЬНЫЙ профиль автоматизации (лежит
+# в папке проекта), чтобы не конфликтовать с запущенным Яндекс Браузером.
+# ВАЖНО: при ПЕРВОМ запуске откроется чистый браузер — один раз залогиньтесь
+# в chat.deepseek.com в этом окне. Сессия сохранится в этом профиле навсегда.
+# (Если хотите использовать свой основной профиль — раскомментируйте строку ниже,
+#  но тогда Яндекс Браузер должен быть ПОЛНОСТЬЮ закрыт, включая фоновые процессы.)
+YANDEX_PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yandex_automation_profile")
+# YANDEX_PROFILE = r"C:\Users\developer\AppData\Local\Yandex\YandexBrowser\User Data"
 
-# Драйвер (yandexdriver.exe) лежит рядом со скриптом
-YANDEX_DRIVER = "yandexdriver.exe"
+# Драйвер (yandexdriver.exe) лежит рядом со скриптом.
+# Если поместили в другое место — впишите здесь ПОЛНЫЙ путь, например:
+# YANDEX_DRIVER = r"C:\Tools\yandexdriver.exe"
+YANDEX_DRIVER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yandexdriver.exe")
 
 STABLE_WAIT_SECONDS = 4.5   # ждать стабилизации ответа
 MAX_WAIT_SECONDS = 120      # общий таймаут ожидания
@@ -68,6 +77,15 @@ class DeepSeekBrowser:
         self.lock = threading.Lock()  # только один запрос за раз
 
     def start(self):
+        # Проверяем драйвер заранее, чтобы дать понятную ошибку
+        if not os.path.isfile(YANDEX_DRIVER):
+            raise FileNotFoundError(
+                f"yandexdriver.exe не найден по пути: {YANDEX_DRIVER}\n"
+                "Скачайте его с https://github.com/yandex/YandexDriver/releases "
+                "(версия = версии вашего Яндекс Браузера) и положите рядом со скриптом, "
+                "или впишите полный путь в переменную YANDEX_DRIVER в начале файла."
+            )
+
         options = Options()
         options.binary_location = YANDEX_EXE
         options.add_argument(r"--user-data-dir=" + YANDEX_PROFILE)
@@ -75,6 +93,8 @@ class DeepSeekBrowser:
         options.add_argument("--no-first-run")
         options.add_argument("--no-default-browser-check")
         options.add_argument("--disable-infobars")
+        options.add_argument("--remote-allow-origins=*")
+        options.add_argument("--disable-features=Translate")
         options.add_experimental_option("excludeSwitches", ["enable-automation"])
         options.add_experimental_option("useAutomationExtension", False)
 
