@@ -42,7 +42,7 @@ YANDEX_EXE = r"C:\Program Files\Yandex\YandexBrowser\Application\browser.exe"
 # в chat.deepseek.com в этом окне. Сессия сохранится в этом профиле навсегда.
 # (Если хотите использовать свой основной профиль — раскомментируйте строку ниже,
 #  но тогда Яндекс Браузер должен быть ПОЛНОСТЬЮ закрыт, включая фоновые процессы.)
-YANDEX_PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yandex_automation_profile")
+YANDEX_PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yandex_automation_profile_proxy")
 # YANDEX_PROFILE = r"C:\Users\developer\AppData\Local\Yandex\YandexBrowser\User Data"
 
 # Драйвер (yandexdriver.exe) лежит рядом со скриптом.
