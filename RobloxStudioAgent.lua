@@ -63,7 +63,6 @@ local toggleBtn = toolbar:CreateButton(
 
 local SETTINGS_KEY = "DeepSeekAgentSettingsV2"
 local settings = plugin:GetSetting(SETTINGS_KEY) or {
-	apiKey = "any-key",
 	model = DEFAULT_MODEL,
 	agentMode = true,
 	history = nil,
@@ -93,34 +92,18 @@ local root = make("Frame", {
 	Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(22, 22, 26), BorderSizePixel = 0,
 }, dockGui)
 
--- Верхняя панель
+-- Верхняя панель: модель + режим
 local topBar = make("Frame", {
 	Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
 }, root)
 
 make("TextLabel", {
-	Size = UDim2.fromOffset(38, 32), BackgroundTransparency = 1, Text = "Ключ:",
+	Size = UDim2.fromOffset(44, 32), BackgroundTransparency = 1, Text = "Модель:",
 	TextColor3 = Color3.fromRGB(190, 190, 190), Font = Enum.Font.Gotham, TextSize = 12,
 }, topBar)
 
-local keyBox = make("TextBox", {
-	Size = UDim2.new(1, -300, 1, -10), Position = UDim2.fromOffset(42, 5),
-	BackgroundColor3 = Color3.fromRGB(16, 16, 20), TextColor3 = Color3.fromRGB(230, 230, 230),
-	Text = settings.apiKey or "any-key", PlaceholderText = "любой ключ",
-	ClearTextOnFocus = false, Font = Enum.Font.Code, TextSize = 12,
-	TextXAlignment = Enum.TextXAlignment.Left,
-}, topBar)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, keyBox)
-
-local saveKeyBtn = make("TextButton", {
-	Size = UDim2.fromOffset(62, 22), Position = UDim2.new(1, -288, 0.5, -11),
-	BackgroundColor3 = Color3.fromRGB(0, 120, 90), Text = "Сохранить",
-	TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamBold, TextSize = 11,
-}, topBar)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, saveKeyBtn)
-
 local modelBox = make("TextBox", {
-	Size = UDim2.fromOffset(110, 22), Position = UDim2.new(1, -220, 0.5, -11),
+	Size = UDim2.fromOffset(130, 22), Position = UDim2.fromOffset(46, 5),
 	BackgroundColor3 = Color3.fromRGB(16, 16, 20), TextColor3 = Color3.fromRGB(230, 230, 230),
 	Text = settings.model or DEFAULT_MODEL, ClearTextOnFocus = false, Font = Enum.Font.Code, TextSize = 12,
 }, topBar)
@@ -144,9 +127,50 @@ local statusLabel = make("TextLabel", {
 	TextXAlignment = Enum.TextXAlignment.Left,
 }, root)
 
--- Лента сообщений
+-- Нижняя панель ВВОДА (якорь к низу окна, тянется при ресайзе)
+local inputBar = make("Frame", {
+	Size = UDim2.new(1, 0, 0, 50), Position = UDim2.new(0, 0, 1, 0),
+	AnchorPoint = Vector2.new(0, 1), BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
+}, root)
+
+local inputBox = make("TextBox", {
+	Size = UDim2.new(1, -110, 1, -12), Position = UDim2.fromOffset(6, 6),
+	BackgroundColor3 = Color3.fromRGB(16, 16, 20), TextColor3 = Color3.fromRGB(235, 235, 235),
+	PlaceholderText = "Задача или вопрос... (Enter — отправить)",
+	TextWrapped = true, ClearTextOnFocus = false, Font = Enum.Font.Gotham,
+	TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+}, inputBar)
+make("UICorner", { CornerRadius = UDim.new(0, 6) }, inputBox)
+
+local sendBtn = make("TextButton", {
+	Size = UDim2.fromOffset(92, 38), Position = UDim2.new(1, -98, 0.5, -19),
+	BackgroundColor3 = Color3.fromRGB(0, 120, 90), Text = "Отправить",
+	TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamBold, TextSize = 12,
+}, inputBar)
+make("UICorner", { CornerRadius = UDim.new(0, 6) }, sendBtn)
+
+-- Панель быстрых действий (над полем ввода)
+local actionsBar = make("Frame", {
+	Size = UDim2.new(1, 0, 0, 38), Position = UDim2.new(0, 0, 1, -50),
+	AnchorPoint = Vector2.new(0, 1), BackgroundTransparency = 1,
+}, root)
+
+local lastAnswer = ""
+local function quickBtn(text, order)
+	return make("TextButton", {
+		Size = UDim2.new(0, 150, 0, 28), Position = UDim2.new(0, 8 + (order - 1) * 158, 0, 5),
+		BackgroundColor3 = Color3.fromRGB(45, 45, 55), Text = text,
+		TextColor3 = Color3.fromRGB(230, 230, 230), Font = Enum.Font.Gotham, TextSize = 11,
+	}, actionsBar)
+end
+local toScriptBtn = quickBtn("💾 Ответ → Script", 1)
+local clearHistBtn = quickBtn("🗑 Очистить чат", 2)
+make("UICorner", { CornerRadius = UDim.new(0, 6) }, toScriptBtn)
+make("UICorner", { CornerRadius = UDim.new(0, 6) }, clearHistBtn)
+
+-- Лента сообщений (растягивается между статусом и панелями снизу)
 local scroll = make("ScrollingFrame", {
-	Size = UDim2.new(1, -12, 1, -118), Position = UDim2.fromOffset(6, 54),
+	Size = UDim2.new(1, -12, 1, -54 - 96), Position = UDim2.fromOffset(6, 54),
 	BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 6,
 	CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 }, root)
@@ -175,46 +199,7 @@ local function addBubble(who, text, color)
 	scroll.CanvasPosition = Vector2.new(0, 1e9)
 end
 
--- Нижняя панель
-local inputBar = make("Frame", {
-	Size = UDim2.new(1, 0, 0, 50), Position = UDim2.new(1, 0, 1, -50),
-	AnchorPoint = Vector2.new(0, 1), BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
-}, root)
-
-local inputBox = make("TextBox", {
-	Size = UDim2.new(1, -110, 1, -12), Position = UDim2.fromOffset(6, 6),
-	BackgroundColor3 = Color3.fromRGB(16, 16, 20), TextColor3 = Color3.fromRGB(235, 235, 235),
-	PlaceholderText = "Задача или вопрос... (Enter — отправить)",
-	TextWrapped = true, ClearTextOnFocus = false, Font = Enum.Font.Gotham,
-	TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
-}, inputBar)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, inputBox)
-
-local sendBtn = make("TextButton", {
-	Size = UDim2.fromOffset(92, 38), Position = UDim2.new(1, -98, 0.5, -19),
-	BackgroundColor3 = Color3.fromRGB(0, 120, 90), Text = "Отправить",
-	TextColor3 = Color3.fromRGB(255, 255, 255), Font = Enum.Font.GothamBold, TextSize = 12,
-}, inputBar)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, sendBtn)
-
--- Панель быстрых действий
-local actionsBar = make("Frame", {
-	Size = UDim2.new(1, 0, 0, 40), Position = UDim2.new(1, 0, 1, -90),
-	AnchorPoint = Vector2.new(0, 1), BackgroundTransparency = 1,
-}, root)
-
-local lastAnswer = ""
-local function quickBtn(text, order)
-	return make("TextButton", {
-		Size = UDim2.fromOffset(150, 28), Position = UDim2.fromOffset(8 + (order - 1) * 156, 6),
-		BackgroundColor3 = Color3.fromRGB(45, 45, 55), Text = text,
-		TextColor3 = Color3.fromRGB(230, 230, 230), Font = Enum.Font.Gotham, TextSize = 11,
-	}, actionsBar)
-end
-local toScriptBtn = quickBtn("💾 Ответ → Script", 1)
-local clearHistBtn = quickBtn("🗑 Очистить чат", 2)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, toScriptBtn)
-make("UICorner", { CornerRadius = UDim.new(0, 6) }, clearHistBtn)
+-- ПАНЕЛЬ ВВОДА УДАЛЕНА ОТСЮДА (перенесена выше с исправленным позиционированием)
 
 -- Восстановить историю
 local history = settings.history or {}
@@ -452,7 +437,7 @@ local function callProxy(messages, temperature)
 		Url = PROXY_URL, Method = "POST",
 		Headers = {
 			["Content-Type"] = "application/json",
-			["Authorization"] = "Bearer " .. (keyBox.Text ~= "" and keyBox.Text or "any-key"),
+			["Authorization"] = "Bearer any-key", -- ключ не используется: прокси локальный
 		},
 		Body = HttpService:JSONEncode({
 			model = modelBox.Text ~= "" and modelBox.Text or DEFAULT_MODEL,
@@ -624,11 +609,12 @@ clearHistBtn.MouseButton1Click:Connect(function()
 	addBubble("СИСТЕМА", "Чат очищен.", Color3.fromRGB(255, 200, 100))
 end)
 
-saveKeyBtn.MouseButton1Click:Connect(function()
-	settings.apiKey = keyBox.Text
-	settings.model = modelBox.Text
-	saveSettings()
-	addBubble("СИСТЕМА", "Настройки сохранены.", Color3.fromRGB(255, 200, 100))
+modelBox.FocusLost:Connect(function(enter)
+	if enter then
+		settings.model = modelBox.Text
+		saveSettings()
+		addBubble("СИСТЕМА", "Модель сохранена: " .. modelBox.Text, Color3.fromRGB(255, 200, 100))
+	end
 end)
 
 toggleBtn.Click:Connect(function()
